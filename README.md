@@ -1,77 +1,55 @@
-# BA882 Team 8 - Technology Adoption Trends via Open Source Repositories
+# GitHub Tech-Adoption Pipeline
 
-## Overview
-This project explores technology adoption trends using open-source developer data from GitHub, Stack Overflow, and Reddit.
+BA882 Team 8 — Manyi Hong, Emre Can Baykurt, Sanjal Atul Desai, Zehui Wang.
 
-## Team Members
-Emre Can Baykurt, Manyi Hong, Sanjal Atul Desai, Zehui Wang
+A weekly **GCP** pipeline that turns GitHub repository metadata into an analysis-ready ML table, enriches READMEs with an LLM, clusters repos with **K-Means (k=4)**, and ships the result to **Streamlit** plus a Slack success/fail ping.
 
-## Phase 1 Objective
-Build an automated, cloud-native data pipeline that:
-01 Fetches GitHub repository metadata weekly using the GitHub API.
-02 Stores raw JSON responses in Google Cloud Storage (GCS).
-03 Parses and loads cleaned structured data into BigQuery tables.
-04 Prepares for later phases of analysis and dashboard visualization.
+Deck: [`docs/presentation.pptx`](docs/presentation.pptx)
 
-## Architecture
+---
 
-```bash
-ba882-pipeline/
-│
-├── README.md
-│
-├── cloud_functions/
-│   ├── raw-extract-github-commits/
-│   │   ├── main.py
-│   │   └── requirements.txt
-│   ├── raw-extract-github-contributors/
-│   │   ├── main.py
-│   │   └── requirements.txt
-│   ├── raw-extract-github-repos/
-│   │   ├── main.py
-│   │   └── requirements.txt
-│   ├── raw-parse-github/
-│   │   ├── main.py
-│   │   └── requirements.txt
-│   ├── raw-schema-setup-bq/
-│   │   ├── main.py
-│   │   └── requirements.txt
-│   └── README.md
-│
-├── notebooks/
-│   ├── 01_github_api_test.ipynb
-│   ├── 02_data_cleaning.ipynb
-│   ├── 03_visualization.ipynb
-│   └── archive/
-│
-├── scripts/
-│   ├── extract_github.py
-│   ├── parse_to_bigquery.py
-│   ├── create_schema_bq.py
-│   └── utils.py
-│
-├── streamlit_app/
-│   ├── app.py
-│   └── requirements.txt
-│
-└── docs/
-    ├── architecture_diagram.png
-    ├── team_notes.md
-    └── project_report_draft.md
-```   
+## What it does
 
-## Deployment Steps
-1. Create GCS bucket: `ba882-t8-github`
-2. Create BigQuery dataset: `ba-882-fall25-team8`
-3. Deploy Cloud Functions:
-   - raw-schema-setup-bq
-   - raw-extract-github-repos
-   - raw-extract-github-contributors
-   - raw-extract-github-commits
-   - raw-parse-github
+1. **Extract** — Cloud Functions pull repos, contributors, commits, languages, and READMEs from the GitHub API (Secret Manager for the token). Raw JSON lands in **Cloud Storage**.
+2. **Parse / transform** — Functions clean JSON into **BigQuery** summary tables (repo / contributor / commit / language).
+3. **LLM enrich** — Read the README, add `category`, `complexity`, `tech_stack`, `audience`, `use_case`.
+4. **Cluster** — Filter missing signals, impute 0, `StandardScaler`, K-Means with 4 clusters, write a signature (mean/median) per cluster.
+5. **Notify + viz** — Slack on success/fail. Streamlit for overview, deep dive, cluster analysis, GenAI insights.
 
-## Tech Stack
-- Google Cloud Platform (GCS, BigQuery, Cloud Functions)
-- Python (requests, pandas, google-cloud-bigquery)
-- Streamlit (for visualization)
+Airflow (Astronomer) runs the DAG **weekly, Saturday 8pm Boston**.
 
+---
+
+## Cluster story (from the deck)
+
+| Cluster | Read as |
+|---|---|
+| 0 | Mature ecosystem — high stars/forks/watchers, older, simpler stack |
+| 1 | High-complexity community hits — active contributors, multi-language, ops/security audience |
+| 2 | Multi-language innovation — CV / ML / data, researchers and ML engineers |
+| 3 | Engineering-driven — rich stack, devops / automation / web servers |
+
+---
+
+## Layout
+
+```
+airflow/dags/github_pipeline_v3.py   # weekly orchestration
+cloud_functions/                     # extract → parse → transform → LLM → cluster
+streamlit_app/                       # dashboard
+docs/presentation.pptx
+```
+
+Set `SLACK_WEBHOOK_URL` and GitHub token in Secret Manager / Airflow variables. Do not commit keys.
+
+---
+
+## Stack
+
+GitHub API · Cloud Functions · Cloud Storage · BigQuery · Airflow / Astronomer · LLM enrichment · scikit-learn K-Means · Streamlit · Slack
+
+---
+
+## License
+
+MIT. See [LICENSE](LICENSE).

@@ -1,4 +1,5 @@
 from datetime import datetime
+import os
 from airflow import DAG
 from airflow.operators.bash import BashOperator
 from airflow.utils.trigger_rule import TriggerRule
@@ -8,7 +9,7 @@ PROJECT_ID = "ba-882-fall25-team8"
 LOCATION = "us-central1"
 
 # ===== Slack Webhook =====
-SLACK_WEBHOOK_URL = "https://hooks.slack.com/services/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"
+SLACK_WEBHOOK_URL = os.environ.get("SLACK_WEBHOOK_URL", "")
 
 default_args = {
     "owner": "airflow",
